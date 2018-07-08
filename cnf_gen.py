@@ -3,6 +3,10 @@ from typing import List, Tuple, IO
 import subprocess
 
 #todo:
+# experimenting with redundant binary representation for multiplication
+# use a sat solver to find a repeating cnf circuit that does squaring???
+# verify the validity of the pythtrip code by forcing the solver to enumerate over all bricks with/without it
+# add some divisor constraints
 # optimized squaring clauses/addition??
 # modularization....? separate class for bitvectors encoding integers
 # wouldn't it be cool if you can just do "a + b = c" and it just works
@@ -71,7 +75,7 @@ class SATSolver:
 
 	def solve(self) -> None:
 		print("Invoking sat solver...")
-		minisat = subprocess.Popen(["minisat", "/dev/stdin", "/dev/stderr"], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+		minisat = subprocess.Popen(["manysat", "-ncores=8", "/dev/stdin", "/dev/stderr"], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 
 		self.__cnf.write(minisat.stdin)
 		minisat.stdin.close()
@@ -193,7 +197,7 @@ def cnf_1bitequal(cnf : CNFFormula, a : CNFVariable, b : CNFVariable) -> None:
 
 def cnf_equal(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable]) -> None:
 	a, b = cnf_padout(a, b)
-
+ 
 	for i in range(len(a)):
 		cnf_1bitequal(cnf, a[i], b[i])
 
@@ -209,7 +213,7 @@ def cnf_1bitmultiplier(cnf : CNFFormula, a : CNFVariable, b : CNFVariable) -> CN
 	return d
 
 def cnf_mult(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable]) -> List[CNFVariable]:
-	assert(len(a) == len(b))
+	a, b = cnf_padout(a, b)
 	#partial product table
 	ppt = []
 	for i in range(len(a)):
@@ -286,10 +290,46 @@ def cnf_div4(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable], c :
 	cnf.add([~w, ~p])
 	cnf.add([~w, ~q])
 
+#use euclid's formula to impose even more structure to the pythagorean triples.
+#will produce all primitive triples, which is good!
+def cnf_enforce_pyth_trip(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable], c : List[CNFVariable], primitive : bool) -> None:
+	assert(len(a) == len(b))
+	assert(len(a) == len(c))
+
+	bitdepth = len(a)
+
+	m = cnf_int(cnf, bitdepth)
+	n = cnf_int(cnf, bitdepth)
+
+	m2 = cnf_square(cnf, m)
+	n2 = cnf_square(cnf, n)
+
+	m2n2 = cnf_add(cnf, m2, n2)
+
+	two = [cnf.const_false(), cnf.const_true()]
+
+	mn = cnf_mult(cnf, m, n)
+	mn2 = cnf_mult(cnf, mn, two)
+
+	# a disgusting way to do subtraction. fix me please
+	m2subn2 = cnf_int(cnf, bitdepth)
+	m2_tmp = cnf_add(cnf, m2subn2, n2)
+	cnf_equal(cnf, m2_tmp, m2)
+
+	if not primitive:
+		k = cnf_int(cnf, bitdepth)
+		m2subn2 = cnf_mult(cnf, m2subn2, k)
+		mn2 = cnf_mult(cnf, mn2, k)
+		m2n2 = cnf_mult(cnf, m2n2, k)
+
+	cnf_equal(cnf, a, m2subn2)
+	cnf_equal(cnf, b, mn2)
+	cnf_equal(cnf, c, m2n2)
+
 if __name__ == "__main__":
 	cnf = CNFFormula()
 
-	bitdepth = 13
+	bitdepth = 20
 	a = cnf_int(cnf, bitdepth)
 	b = cnf_int(cnf, bitdepth)
 	c = cnf_int(cnf, bitdepth)
@@ -316,6 +356,11 @@ if __name__ == "__main__":
 
 	a2b2c2 = cnf_add(cnf, a2b2, c2)
 
+	#ensure a, b, c != 0
+	cnf.add(a)
+	cnf.add(b)
+	cnf.add(c)
+
 	# add the system of equations
 	cnf_equal(cnf, a2b2, d2)
 	cnf_equal(cnf, a2c2, e2)
@@ -323,10 +368,14 @@ if __name__ == "__main__":
 
 	cnf_equal(cnf, a2b2c2, g2)
 
-	#ensure a, b, c != 0
-	cnf.add(a)
-	cnf.add(b)
-	cnf.add(c)
+	#enforce euclid's formula on the triples
+	cnf_enforce_pyth_trip(cnf, a, b, d, True)
+	# cnf_enforce_pyth_trip(cnf, a, c, e, False)
+	cnf_enforce_pyth_trip(cnf, b, c, f, True)
+
+	# cnf_enforce_pyth_trip(cnf, a, f, g, False)
+	# cnf_enforce_pyth_trip(cnf, b, e, g, False)
+	# cnf_enforce_pyth_trip(cnf, c, d, g, False)
 
 	#add conditions from the wiki article
 	cnf.add([a[0]]) #force a to be the odd side
@@ -347,6 +396,9 @@ if __name__ == "__main__":
 	#given properties of a,b,c, => g = 4k + 1 for some k
 	cnf.add([g[0]])
 	cnf.add([~g[1]])
+
+	# with open("brick.cnf", "wb") as myfile:
+	# 	cnf.write(myfile)
 
 	solver = SATSolver(cnf)
 	solver.solve()
