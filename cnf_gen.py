@@ -20,7 +20,7 @@ class CNFVariable:
 
 		return abs(self.__val) == abs(other.__val)
 
-	def __len__(self) -> bool:
+	def __len__(self) -> int:
 		if self.__val > 0:
 			return 1
 		else:
@@ -38,10 +38,22 @@ class CNFFormula:
 		self.__maxvar = 1 #type: int
 		self.__clauses = [] #type: List[List[CNFVariable]]
 
+		self.__always_false = self.new_var()
+		self.__always_true = self.new_var()
+
+		self.add([~self.__always_false])
+		self.add([self.__always_true])
+
 	def new_var(self) -> CNFVariable:
 		var = self.__maxvar
 		self.__maxvar += 1
 		return CNFVariable(var)
+
+	def const_true(self) -> CNFVariable:
+		return self.__always_true
+
+	def const_false(self) -> CNFVariable:
+		return self.__always_false
 
 	def add(self, clause : List[CNFVariable]) -> None:
 		self.__clauses.append(clause)
@@ -110,7 +122,7 @@ class SATSolver:
 def cnf_int(cnf : CNFFormula, bits : int) -> List[CNFVariable]:
 	return [cnf.new_var() for i in range(bits)]
 
-def cnf_equal(cnf : CNFFormula, n : List[CNFVariable], c : int) -> None:
+def cnf_constant(cnf : CNFFormula, n : List[CNFVariable], c : int) -> None:
 	for i in range(len(n)):
 		b = c & 1
 		c >>= 1
@@ -120,7 +132,7 @@ def cnf_equal(cnf : CNFFormula, n : List[CNFVariable], c : int) -> None:
 			cnf.add([~n[i]])
 
 	if c > 0:
-		print("WARNING: overflow in cnf_equal!")
+		print("WARNING: overflow in cnf_constant!")
 
 def cnf_1bitadder(cnf : CNFFormula, a : CNFVariable, b : CNFVariable, c : CNFVariable) -> Tuple[CNFVariable, CNFVariable]:
 	res = cnf.new_var()
@@ -148,11 +160,25 @@ def cnf_1bitadder(cnf : CNFFormula, a : CNFVariable, b : CNFVariable, c : CNFVar
 
 	return res, res_carry
 
-def cnf_add(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable]) -> List[CNFVariable]:
-	assert(len(a) == len(b))
+def cnf_padout(a : List[CNFVariable], b : List[CNFVariable]) -> Tuple[List[CNFVariable], List[CNFVariable]]:
+	aa = a[:]
+	bb = b[:]
+	if len(aa) < len(bb):
+		for i in range(len(aa), len(bb)):
+			aa.append(cnf.const_false())
+	elif len(bb) < len(aa):
+		for i in range(len(bb), len(aa)):
+			bb.append(cnf.const_false())
 
-	carry = cnf.new_var()
-	cnf.add([~carry]) # The first carry is always 0
+	assert(len(aa) == len(bb))
+
+	return aa, bb
+
+def cnf_add(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable]) -> List[CNFVariable]:
+	#if the lengths are incorrect, just pad up with zero variables
+	a, b = cnf_padout(a, b)
+
+	carry = cnf.const_false() # The first carry is always 0
 
 	out = []
 	for (ai, bi) in zip(a, b):
@@ -163,6 +189,15 @@ def cnf_add(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable]) -> L
 	return out
 
 #rest of this is my stuff
+def cnf_1bitequal(cnf : CNFFormula, a : CNFVariable, b : CNFVariable) -> None:
+	cnf.add([a, ~b])
+	cnf.add([~a, b])
+
+def cnf_equal(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable]) -> None:
+	a, b = cnf_padout(a, b)
+
+	for i in range(len(a)):
+		cnf_1bitequal(cnf, a[i], b[i])
 
 # creates a new var d st. (a ^ b) <=> d
 def cnf_1bitmultiplier(cnf : CNFFormula, a : CNFVariable, b : CNFVariable) -> CNFVariable:
@@ -187,43 +222,37 @@ def cnf_mult(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable]) -> 
 		ppt.append(pptrow)
 
 	out = ppt[0][:]
-	#useless, pitiful variable...
-	dumbo = cnf.new_var()
-	cnf.add([~dumbo])
-	out.append(dumbo)
 
 	for i in range(1, len(a)):
-		# print(i)
-		# print(out)
 		out[i:] = cnf_add(cnf, out[i:], ppt[i][:])
-		# print(out)
 
 	return out
+
+def cnf_square(cnf : CNFFormula, a : List[CNFVariable]) -> List[CNFVariable]:
+	return cnf_mult(cnf, a, a)
 
 if __name__ == "__main__":
 	cnf = CNFFormula()
 
-	bitdepth = 24
+	bitdepth = 8
 	a = cnf_int(cnf, bitdepth)
 	b = cnf_int(cnf, bitdepth)
+	c = cnf_int(cnf, bitdepth)
 
-	ab = cnf_mult(cnf, a, b)
+	a2 = cnf_square(cnf, a)
+	b2 = cnf_square(cnf, b)
+	c2 = cnf_square(cnf, c)
+
+	a2b2 = cnf_add(cnf, a2, b2)
 
 	#ensure neither a nor b is 1, i.e. at least one bit other than the first is set
-	cnf.add(a[1:])
-	cnf.add(b[1:])
+	cnf.add(a)
+	cnf.add(b)
+	cnf.add(c)
 
-	aint = 67589
-	bint = 15485867
-	abint = aint*bint
-
-	print("a: " + str(aint))
-	print("b: " + str(bint))
-	print("ab: " + str(abint))
-
-	# cnf_equal(cnf, a, aint)
-	# cnf_equal(cnf, b, bint)
-	cnf_equal(cnf, ab, abint)
+	# cnf_constant(cnf, a, 3)
+	# cnf_constant(cnf, b, 4)
+	cnf_equal(cnf, a2b2, c2)
 
 	solver = SATSolver(cnf)
 	solver.solve()
@@ -232,10 +261,11 @@ if __name__ == "__main__":
 	if (solver.satisfiable()):
 		aint = solver.varlist_to_int(a)
 		bint = solver.varlist_to_int(b)
+		cint = solver.varlist_to_int(c)
 		# a2b2int = solver.varlist_to_int(a2b2)
-
-		assert(aint*bint == abint)
 
 		print("a: " + str(aint))
 		print("b: " + str(bint))
-		print("ab: " + str(abint))
+		print("c: " + str(cint))
+
+		assert(aint*aint + bint*bint == cint*cint)
