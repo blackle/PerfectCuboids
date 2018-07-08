@@ -3,8 +3,6 @@ from typing import List, Tuple, IO
 import subprocess
 
 #todo:
-# automatic padding during addition/multiplication
-# find and restrict overflow from happening
 # optimized squaring clauses/addition??
 # modularization....? separate class for bitvectors encoding integers
 # wouldn't it be cool if you can just do "a + b = c" and it just works
@@ -231,28 +229,114 @@ def cnf_mult(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable]) -> 
 def cnf_square(cnf : CNFFormula, a : List[CNFVariable]) -> List[CNFVariable]:
 	return cnf_mult(cnf, a, a)
 
+#exactly one number is odd out of the three
+def cnf_odd1(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable], c : List[CNFVariable]) -> None:
+	x = a[0]
+	y = c[0]
+	z = b[0]
+
+	cnf.add([x, y, z])
+	cnf.add([~x, ~y])
+	cnf.add([~x, ~z])
+	cnf.add([~y, ~z])
+
+def cnf_1div4(cnf : CNFFormula, a : List[CNFVariable]) -> None:
+	cnf.add([~a[0]])
+	cnf.add([~a[1]])
+
+def cnf_1div16(cnf : CNFFormula, a : List[CNFVariable]) -> None:
+	cnf.add([~a[0]])
+	cnf.add([~a[1]])
+	cnf.add([~a[2]])
+	cnf.add([~a[3]])
+
+#exactly two numbers are odd out of the three
+def cnf_odd2(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable], c : List[CNFVariable]) -> None:
+	x = a[0]
+	y = c[0]
+	z = b[0]
+
+	cnf.add([~x, ~y, ~z])
+	cnf.add([x, y])
+	cnf.add([x, z])
+	cnf.add([y, z])
+
+#at least 2 divisible by 4
+def cnf_div4(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable], c : List[CNFVariable]) -> None:
+
+	x = a[0]
+	y = a[1]
+
+	z = b[0]
+	w = b[1]
+
+	p = c[0]
+	q = c[1]
+
+	cnf.add([~x, ~z]) 
+	cnf.add([~x, ~w]) 
+	cnf.add([~x, ~p]) 
+	cnf.add([~x, ~q]) 
+	cnf.add([~y, ~z]) 
+	cnf.add([~y, ~w]) 
+	cnf.add([~y, ~p]) 
+	cnf.add([~y, ~q]) 
+	cnf.add([~z, ~p]) 
+	cnf.add([~z, ~q]) 
+	cnf.add([~w, ~p]) 
+	cnf.add([~w, ~q])
+
 if __name__ == "__main__":
 	cnf = CNFFormula()
 
-	bitdepth = 8
+	bitdepth = 12
 	a = cnf_int(cnf, bitdepth)
 	b = cnf_int(cnf, bitdepth)
 	c = cnf_int(cnf, bitdepth)
+
+	d = cnf_int(cnf, bitdepth)
+	e = cnf_int(cnf, bitdepth)
+	f = cnf_int(cnf, bitdepth)
+
+	g = cnf_int(cnf, bitdepth)
 
 	a2 = cnf_square(cnf, a)
 	b2 = cnf_square(cnf, b)
 	c2 = cnf_square(cnf, c)
 
-	a2b2 = cnf_add(cnf, a2, b2)
+	d2 = cnf_square(cnf, d)
+	e2 = cnf_square(cnf, e)
+	f2 = cnf_square(cnf, f)
 
-	#ensure neither a nor b is 1, i.e. at least one bit other than the first is set
+	g2 = cnf_square(cnf, g)
+
+	a2b2 = cnf_add(cnf, a2, b2)
+	a2c2 = cnf_add(cnf, a2, c2)
+	b2c2 = cnf_add(cnf, b2, c2)
+
+	a2b2c2 = cnf_add(cnf, a2b2, c2)
+
+	#ensure a, b, c != 0
 	cnf.add(a)
 	cnf.add(b)
 	cnf.add(c)
+	cnf.add(d)
+	cnf.add(e)
+	cnf.add(f)
+	cnf.add(g)
 
-	# cnf_constant(cnf, a, 3)
-	# cnf_constant(cnf, b, 4)
-	cnf_equal(cnf, a2b2, c2)
+	#add conditions from the wiki article
+	cnf.add([a[0]]) #force a to be the odd side
+	cnf_1div4(cnf, b) #force b to be the side divisible by 4
+	cnf_1div16(cnf, c) #force c to be the side divisible by 16
+	cnf_odd2(cnf, d, e, f) #two face diagonals must be odd
+	cnf.add([g[0]]) #body diagonal must be odd
+
+	cnf_equal(cnf, a2b2, d2)
+	cnf_equal(cnf, a2c2, e2)
+	cnf_equal(cnf, b2c2, f2)
+
+	cnf_equal(cnf, a2b2c2, g2)
 
 	solver = SATSolver(cnf)
 	solver.solve()
@@ -262,10 +346,16 @@ if __name__ == "__main__":
 		aint = solver.varlist_to_int(a)
 		bint = solver.varlist_to_int(b)
 		cint = solver.varlist_to_int(c)
+
+		dint = solver.varlist_to_int(d)
+		eint = solver.varlist_to_int(e)
+		fint = solver.varlist_to_int(f)
 		# a2b2int = solver.varlist_to_int(a2b2)
 
 		print("a: " + str(aint))
 		print("b: " + str(bint))
 		print("c: " + str(cint))
 
-		assert(aint*aint + bint*bint == cint*cint)
+		assert(aint*aint + bint*bint == dint*dint)
+		assert(aint*aint + cint*cint == eint*eint)
+		assert(bint*bint + cint*cint == fint*fint)
