@@ -273,23 +273,23 @@ def cnf_div4(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFVariable], c :
 	p = c[0]
 	q = c[1]
 
-	cnf.add([~x, ~z]) 
-	cnf.add([~x, ~w]) 
-	cnf.add([~x, ~p]) 
-	cnf.add([~x, ~q]) 
-	cnf.add([~y, ~z]) 
-	cnf.add([~y, ~w]) 
-	cnf.add([~y, ~p]) 
-	cnf.add([~y, ~q]) 
-	cnf.add([~z, ~p]) 
-	cnf.add([~z, ~q]) 
-	cnf.add([~w, ~p]) 
+	cnf.add([~x, ~z])
+	cnf.add([~x, ~w])
+	cnf.add([~x, ~p])
+	cnf.add([~x, ~q])
+	cnf.add([~y, ~z])
+	cnf.add([~y, ~w])
+	cnf.add([~y, ~p])
+	cnf.add([~y, ~q])
+	cnf.add([~z, ~p])
+	cnf.add([~z, ~q])
+	cnf.add([~w, ~p])
 	cnf.add([~w, ~q])
 
 if __name__ == "__main__":
 	cnf = CNFFormula()
 
-	bitdepth = 12
+	bitdepth = 13
 	a = cnf_int(cnf, bitdepth)
 	b = cnf_int(cnf, bitdepth)
 	c = cnf_int(cnf, bitdepth)
@@ -316,27 +316,37 @@ if __name__ == "__main__":
 
 	a2b2c2 = cnf_add(cnf, a2b2, c2)
 
-	#ensure a, b, c != 0
-	cnf.add(a)
-	cnf.add(b)
-	cnf.add(c)
-	cnf.add(d)
-	cnf.add(e)
-	cnf.add(f)
-	cnf.add(g)
-
-	#add conditions from the wiki article
-	cnf.add([a[0]]) #force a to be the odd side
-	cnf_1div4(cnf, b) #force b to be the side divisible by 4
-	cnf_1div16(cnf, c) #force c to be the side divisible by 16
-	cnf_odd2(cnf, d, e, f) #two face diagonals must be odd
-	cnf.add([g[0]]) #body diagonal must be odd
-
+	# add the system of equations
 	cnf_equal(cnf, a2b2, d2)
 	cnf_equal(cnf, a2c2, e2)
 	cnf_equal(cnf, b2c2, f2)
 
 	cnf_equal(cnf, a2b2c2, g2)
+
+	#ensure a, b, c != 0
+	cnf.add(a)
+	cnf.add(b)
+	cnf.add(c)
+
+	#add conditions from the wiki article
+	cnf.add([a[0]]) #force a to be the odd side
+	cnf_1div4(cnf, b) #force b to be the side divisible by 4
+	cnf_1div16(cnf, c) #force c to be the side divisible by 16
+
+	#a odd and b divisible by 4 => d = 4k + 1 for some k
+	cnf.add([d[0]])
+	cnf.add([~d[1]])
+
+	#a odd and c divisible by 16 => e = 4k + 1 for some k
+	cnf.add([e[0]])
+	cnf.add([~e[1]])
+
+	#b divisible by 4 and c divisible by 16 => f = 16k for some k
+	cnf_1div16(cnf, f)
+
+	#given properties of a,b,c, => g = 4k + 1 for some k
+	cnf.add([g[0]])
+	cnf.add([~g[1]])
 
 	solver = SATSolver(cnf)
 	solver.solve()
