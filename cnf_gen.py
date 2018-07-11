@@ -329,7 +329,7 @@ def cnf_enforce_pyth_trip(cnf : CNFFormula, a : List[CNFVariable], b : List[CNFV
 if __name__ == "__main__":
 	cnf = CNFFormula()
 
-	bitdepth = 20
+	bitdepth = 14
 	a = cnf_int(cnf, bitdepth)
 	b = cnf_int(cnf, bitdepth)
 	c = cnf_int(cnf, bitdepth)
@@ -370,7 +370,7 @@ if __name__ == "__main__":
 
 	#enforce euclid's formula on the triples
 	cnf_enforce_pyth_trip(cnf, a, b, d, True)
-	# cnf_enforce_pyth_trip(cnf, a, c, e, False)
+	cnf_enforce_pyth_trip(cnf, a, c, e, False)
 	cnf_enforce_pyth_trip(cnf, b, c, f, True)
 
 	# cnf_enforce_pyth_trip(cnf, a, f, g, False)
