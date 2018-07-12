@@ -1,4 +1,4 @@
-from model import Variable
+from .variable import Variable
 from typing import List, IO
 
 class Formula:

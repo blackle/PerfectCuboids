@@ -10,8 +10,7 @@ class Solver:
 		self.__solution = [] #type: List[Variable]
 
 	def solve(self) -> None:
-		print("Invoking sat solver...")
-		minisat = subprocess.Popen(["manysat", "-ncores=8", "/dev/stdin", "/dev/stderr"], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+		minisat = subprocess.Popen(["minisat", "/dev/stdin", "/dev/stderr"], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 
 		self.__cnf.write(minisat.stdin)
 		minisat.stdin.close()
@@ -32,6 +31,11 @@ class Solver:
 	def satisfiable(self) -> bool:
 		assert(self.__solver_invoked)
 		return self.__satisfiable
+
+	def solution(self) -> List[Variable]:
+		assert(self.__solver_invoked)
+		assert(self.__satisfiable)
+		return self.__solution
 
 	def varlist_to_int(self, varlist : List[Variable]) -> int:
 		assert(self.__solver_invoked)

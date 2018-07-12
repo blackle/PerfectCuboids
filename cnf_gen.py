@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from model import Variable, Formula
 from solver import Solver
+from encoding import new_integer
 from typing import List, Tuple
 
 #todo:
@@ -13,8 +14,6 @@ from typing import List, Tuple
 # wouldn't it be cool if you can just do "a + b = c" and it just works
 
 #code from https://blog.lse.epita.fr/articles/24-using-sat-and-smt-to-defeat-simple-hashing-algorit.html
-def cnf_int(cnf : Formula, bits : int) -> List[Variable]:
-	return [cnf.new_var() for i in range(bits)]
 
 def cnf_constant(cnf : Formula, n : List[Variable], c : int) -> None:
 	for i in range(len(n)):
@@ -190,8 +189,8 @@ def cnf_enforce_pyth_trip(cnf : Formula, a : List[Variable], b : List[Variable],
 
 	bitdepth = len(a)
 
-	m = cnf_int(cnf, bitdepth)
-	n = cnf_int(cnf, bitdepth)
+	m = new_integer(cnf, bitdepth)
+	n = new_integer(cnf, bitdepth)
 
 	m2 = cnf_square(cnf, m)
 	n2 = cnf_square(cnf, n)
@@ -204,12 +203,12 @@ def cnf_enforce_pyth_trip(cnf : Formula, a : List[Variable], b : List[Variable],
 	mn2 = cnf_mult(cnf, mn, two)
 
 	# a disgusting way to do subtraction. fix me please
-	m2subn2 = cnf_int(cnf, bitdepth)
+	m2subn2 = new_integer(cnf, bitdepth)
 	m2_tmp = cnf_add(cnf, m2subn2, n2)
 	cnf_equal(cnf, m2_tmp, m2)
 
 	if not primitive:
-		k = cnf_int(cnf, bitdepth)
+		k = new_integer(cnf, bitdepth)
 		m2subn2 = cnf_mult(cnf, m2subn2, k)
 		mn2 = cnf_mult(cnf, mn2, k)
 		m2n2 = cnf_mult(cnf, m2n2, k)
@@ -222,15 +221,15 @@ if __name__ == "__main__":
 	cnf = Formula()
 
 	bitdepth = 14
-	a = cnf_int(cnf, bitdepth)
-	b = cnf_int(cnf, bitdepth)
-	c = cnf_int(cnf, bitdepth)
+	a = new_integer(cnf, bitdepth)
+	b = new_integer(cnf, bitdepth)
+	c = new_integer(cnf, bitdepth)
 
-	d = cnf_int(cnf, bitdepth)
-	e = cnf_int(cnf, bitdepth)
-	f = cnf_int(cnf, bitdepth)
+	d = new_integer(cnf, bitdepth)
+	e = new_integer(cnf, bitdepth)
+	f = new_integer(cnf, bitdepth)
 
-	g = cnf_int(cnf, bitdepth)
+	g = new_integer(cnf, bitdepth)
 
 	a2 = cnf_square(cnf, a)
 	b2 = cnf_square(cnf, b)
