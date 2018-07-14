@@ -10,7 +10,7 @@ class Solver:
 		self.__solution = [] #type: List[Variable]
 
 	def solve(self) -> None:
-		minisat = subprocess.Popen(["minisat", "/dev/stdin", "/dev/stderr"], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+		minisat = subprocess.Popen(["minisat", "-rnd-init", "/dev/stdin", "/dev/stderr"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 
 		self.__cnf.write(minisat.stdin)
 		minisat.stdin.close()

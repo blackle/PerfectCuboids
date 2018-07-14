@@ -1,6 +1,6 @@
 from model import Variable, Formula
 from solver import Solver
-from encoding import new_bitmap, flatten, one_of_k
+from encoding import new_bitmap, flatten, one_of_k_commander
 from typing import List, Tuple
 
 def knight_movement(cnf : Formula, timeboard : List[List[List[Variable]]], t : int, tnew : int, x : int, y : int) -> None:
@@ -49,12 +49,12 @@ if __name__ == "__main__":
 
 	#ensure the knight is in exactly one place at any moment in time
 	for board in timeboard:
-		one_of_k(cnf, flatten(board))
+		one_of_k_commander(cnf, flatten(board), 4)
 
 	#ensure the knight doesn't visit the same spot multiple times
 	for i in range(board_size):
 		for j in range(board_size):
-			one_of_k(cnf, [timeboard[t][i][j] for t in range(tour_len)])
+			one_of_k_commander(cnf, [timeboard[t][i][j] for t in range(tour_len)], 8)
 
 	#ensure knight movement is correct for each spot
 	for t in range(tour_len):
@@ -65,6 +65,8 @@ if __name__ == "__main__":
 
 	#start us in the top left corner
 	cnf.add([timeboard[0][0][0]])
+	#end us there too
+	# cnf.add([timeboard[-1][1][2], timeboard[-1][2][1]])
 
 	solver = Solver(cnf)
 	solver.solve()
