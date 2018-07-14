@@ -32,7 +32,8 @@ def one_of_k_commander(cnf : Formula, varlist : List[Variable], group_size : int
 	at_least_one(cnf, varlist)
 
 	length = len(varlist)
-	if length <= 1:
+	if length == 1:
+		cnf.add([varlist[0]])
 		return
 	assert(length % group_size == 0)
 

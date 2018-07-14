@@ -64,7 +64,7 @@ if __name__ == "__main__":
 				knight_movement(cnf, timeboard, t, t-1, x, y)
 
 	#start us in the top left corner
-	cnf.add([timeboard[0][0][0]])
+	# cnf.add([timeboard[0][0][0]])
 	#end us there too
 	# cnf.add([timeboard[-1][1][2], timeboard[-1][2][1]])
 
@@ -83,13 +83,12 @@ if __name__ == "__main__":
 					if spaceint == 1:
 						tpos = t
 						break
-				print(str(tpos).ljust(3), end='')
+				print(str(tpos+1).ljust(3), end='')
 						
 			print("")
 		print("")
 
 		cnf.add([~var for var in solver.solution()])
-		break
 
 		solver = Solver(cnf)
 		solver.solve()

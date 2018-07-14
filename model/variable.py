@@ -2,6 +2,9 @@ class Variable:
 	def __init__(self, val : int) -> None:
 		self.__val = val #type: int
 
+	def __int__(self) -> int:
+		return abs(self.__val)
+
 	#this sucks and makes no sense(?)
 	def __eq__(self, other : object) -> bool:
 		if not isinstance(other, Variable):

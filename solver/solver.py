@@ -10,7 +10,7 @@ class Solver:
 		self.__solution = [] #type: List[Variable]
 
 	def solve(self) -> None:
-		minisat = subprocess.Popen(["minisat", "-rnd-init", "/dev/stdin", "/dev/stderr"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+		minisat = subprocess.Popen(["manysat", "-ncores=8", "-rnd-init", "/dev/stdin", "/dev/stderr"], stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 
 		self.__cnf.write(minisat.stdin)
 		minisat.stdin.close()
@@ -41,21 +41,12 @@ class Solver:
 		assert(self.__solver_invoked)
 		assert(self.__satisfiable)
 
-		bitvector = [] #type: List[bool]
-
-		for var in varlist:
-			for solvar in self.__solution:
-				if var == solvar:
-					bitvector.append(bool(solvar))
-
-					break
-
-		assert(len(bitvector) == len(varlist))
-
 		intval = 0 #type: int
 
-		for i in range(len(bitvector)):
-			if bitvector[i]:
+		for i in range(len(varlist)):
+			solvar = self.__solution[int(varlist[i])-1]
+			assert(solvar == varlist[i])
+			if solvar:
 				intval += pow(2, i)
 
 		return intval
